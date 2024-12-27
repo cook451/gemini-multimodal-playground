@@ -39,6 +39,8 @@ export default function GeminiVoiceChat() {
   const videoStreamRef = useRef<MediaStream | null>(null);
   const videoIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const [chatMode, setChatMode] = useState<'audio' | 'video' | null>(null);
+  const [videoDevices, setVideoDevices] = useState<MediaDeviceInfo[]>([]);
+  const [selectedCamera, setSelectedCamera] = useState<string>('');
 
   const voices = ["Puck", "Charon", "Kore", "Fenrir", "Aoede"];
   let audioBuffer = []
@@ -186,12 +188,31 @@ export default function GeminiVoiceChat() {
     source.start();
   };
 
+  const getVideoDevices = async () => {
+    try {
+      const devices = await navigator.mediaDevices.enumerateDevices();
+      const videoDevices = devices.filter(device => device.kind === 'videoinput');
+      setVideoDevices(videoDevices);
+      if (videoDevices.length > 0) {
+        setSelectedCamera(videoDevices[0].deviceId);
+      }
+    } catch (err) {
+      console.error('Error getting video devices:', err);
+      setError('Failed to get camera list');
+    }
+  };
+
+  useEffect(() => {
+    getVideoDevices();
+  }, []);
+
   useEffect(() => {
     if (videoEnabled && videoRef.current) {
       const startVideo = async () => {
         try {
           const stream = await navigator.mediaDevices.getUserMedia({
             video: {
+              deviceId: selectedCamera ? { exact: selectedCamera } : undefined,
               width: { ideal: 320 },
               height: { ideal: 240 }
             }
@@ -200,7 +221,6 @@ export default function GeminiVoiceChat() {
           videoRef.current.srcObject = stream;
           videoStreamRef.current = stream;
           
-          // Start frame capture after video is playing
           videoIntervalRef.current = setInterval(() => {
             captureAndSendFrame();
           }, 1000);
@@ -369,6 +389,35 @@ export default function GeminiVoiceChat() {
             <CardContent className="pt-6 space-y-4">
               <div className="flex justify-between items-center">
                 <h2 className="text-lg font-semibold">Video Input</h2>
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="camera-select">Camera</Label>
+                <Select
+                  value={selectedCamera}
+                  onValueChange={(value) => {
+                    setSelectedCamera(value);
+                    if (videoStreamRef.current) {
+                      videoStreamRef.current.getTracks().forEach(track => track.stop());
+                      setVideoEnabled(false);
+                      setTimeout(() => setVideoEnabled(true), 100);
+                    }
+                  }}
+                >
+                  <SelectTrigger id="camera-select">
+                    <SelectValue placeholder="Select a camera" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {videoDevices.map((device, index) => (
+                      <SelectItem 
+                        key={device.deviceId} 
+                        value={device.deviceId || `camera-${index + 1}`}
+                      >
+                        {device.label || `Camera ${index + 1}`}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
               
               <div className="relative aspect-video bg-black rounded-lg overflow-hidden">
