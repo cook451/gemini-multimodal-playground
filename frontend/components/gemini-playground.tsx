@@ -362,6 +362,7 @@ export default function GeminiVoiceChat() {
           )}
         </div>
 
+        {/*
         {isStreaming && (
           <Card>
             <CardContent className="flex items-center justify-center h-24 mt-6">
@@ -372,6 +373,7 @@ export default function GeminiVoiceChat() {
             </CardContent>
           </Card>
         )}
+        */}
 
         {chatMode === 'video' && (
           <Card>
