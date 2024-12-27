@@ -272,7 +272,7 @@ export default function GeminiVoiceChat() {
   return (
     <div className="container mx-auto py-8 px-4">
       <div className="space-y-6">
-        <h1 className="text-4xl font-bold tracking-tight">Gemini 2.0 Realtime Playground ✨</h1>
+        <h1 className="text-4xl font-bold tracking-tight">✨ Gemini 2.0 ✨</h1>
         
         {error && (
           <Alert variant="destructive">
@@ -284,7 +284,7 @@ export default function GeminiVoiceChat() {
         <Card>
           <CardContent className="pt-6 space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="system-prompt">System Prompt</Label>
+              <Label htmlFor="system-prompt">Base Prompt</Label>
               <Textarea
                 id="system-prompt"
                 value={config.systemPrompt}
@@ -327,7 +327,7 @@ export default function GeminiVoiceChat() {
           </CardContent>
         </Card>
 
-        <div className="flex gap-4">
+        <div className="flex gap-3">
           {!isStreaming && (
             <>
             <Button
