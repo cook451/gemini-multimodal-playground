@@ -52,13 +52,13 @@ export default function GeminiVoiceChat() {
     setChatMode(mode);
     const ws = new WebSocket(`ws://localhost:8000/ws/${clientId.current}`);
     wsRef.current = ws;
-    
+
     ws.onopen = async () => {
       ws.send(JSON.stringify({
         type: 'config',
         config: config
       }));
-      
+
       await startAudioStream();
       if (mode === 'video') {
         setVideoEnabled(true);
@@ -95,10 +95,10 @@ export default function GeminiVoiceChat() {
       audioContextRef.current = ctx;
 
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      
+
       const source = ctx.createMediaStreamSource(stream);
       const processor = ctx.createScriptProcessor(512, 1, 1);
-      
+
       processor.onaudioprocess = (e: AudioProcessingEvent) => {
         if (wsRef.current?.readyState === WebSocket.OPEN) {
           const inputData = e.inputBuffer.getChannelData(0);
@@ -114,7 +114,7 @@ export default function GeminiVoiceChat() {
 
       source.connect(processor);
       processor.connect(ctx.destination);
-      
+
       audioInputRef.current = { source, processor, stream };
       setIsStreaming(true);
     } catch (err) {
@@ -173,7 +173,7 @@ export default function GeminiVoiceChat() {
     if (videoEnabled && videoRef.current) {
       const startVideo = async () => {
         if (!videoRef.current) return;
-        
+
         try {
           const stream = await navigator.mediaDevices.getUserMedia({
             video: {
@@ -182,10 +182,10 @@ export default function GeminiVoiceChat() {
               height: { ideal: 240 }
             }
           });
-          
+
           videoRef.current.srcObject = stream;
           videoStreamRef.current = stream;
-          
+
           videoIntervalRef.current = setInterval(() => {
             captureAndSendFrame();
           }, 1000);
@@ -217,16 +217,16 @@ export default function GeminiVoiceChat() {
   // Frame capture function
   const captureAndSendFrame = () => {
     if (!canvasRef.current || !videoRef.current || !wsRef.current) return;
-    
+
     const context = canvasRef.current.getContext('2d');
     if (!context) return;
-    
+
     canvasRef.current.width = videoRef.current.videoWidth;
     canvasRef.current.height = videoRef.current.videoHeight;
-    
+
     context.drawImage(videoRef.current, 0, 0);
     const base64Image = canvasRef.current.toDataURL('image/jpeg').split(',')[1];
-    
+
     wsRef.current.send(JSON.stringify({
       type: 'image',
       data: base64Image
@@ -272,8 +272,8 @@ export default function GeminiVoiceChat() {
   return (
     <div className="container mx-auto py-8 px-4">
       <div className="space-y-6">
-        <h1 className="text-4xl font-bold tracking-tight">✨ Gemini 2.0 ✨</h1>
-        
+        <h1 className="text-4xl font-bold tracking-tight">Gemini 2.0 ✨</h1>
+
         {error && (
           <Alert variant="destructive">
             <AlertTitle>Error</AlertTitle>
@@ -318,7 +318,7 @@ export default function GeminiVoiceChat() {
               <Checkbox
                 id="google-search"
                 checked={config.googleSearch}
-                onCheckedChange={(checked) => 
+                onCheckedChange={(checked) =>
                   setConfig(prev => ({ ...prev, googleSearch: checked as boolean }))}
                 disabled={isConnected}
               />
@@ -330,23 +330,23 @@ export default function GeminiVoiceChat() {
         <div className="flex gap-3">
           {!isStreaming && (
             <>
-            <Button
-              onClick={() => startStream('audio')}
-              disabled={isStreaming}
-              className="gap-2"
-          >
-            <Mic className="h-4 w-4" />
-            Start Chatting
-          </Button>
+              <Button
+                onClick={() => startStream('audio')}
+                disabled={isStreaming}
+                className="gap-2"
+              >
+                <Mic className="h-4 w-4" />
+                Start Chatting
+              </Button>
 
-          <Button
-            onClick={() => startStream('video')}
-            disabled={isStreaming}
-            className="gap-2"
-          >
-            <Video className="h-4 w-4" />
-              Start Chatting with Video
-            </Button>
+              <Button
+                onClick={() => startStream('video')}
+                disabled={isStreaming}
+                className="gap-2"
+              >
+                <Video className="h-4 w-4" />
+                Start Chatting with Video
+              </Button>
             </>
           )}
 
@@ -381,7 +381,7 @@ export default function GeminiVoiceChat() {
               <div className="flex justify-between items-center">
                 <h2 className="text-lg font-semibold">Video Input</h2>
               </div>
-              
+
               <div className="space-y-2">
                 <Label htmlFor="camera-select">Camera</Label>
                 <Select
@@ -400,8 +400,8 @@ export default function GeminiVoiceChat() {
                   </SelectTrigger>
                   <SelectContent>
                     {videoDevices.map((device, index) => (
-                      <SelectItem 
-                        key={device.deviceId} 
+                      <SelectItem
+                        key={device.deviceId}
                         value={device.deviceId || `camera-${index + 1}`}
                       >
                         {device.label || `Camera ${index + 1}`}
@@ -410,7 +410,7 @@ export default function GeminiVoiceChat() {
                   </SelectContent>
                 </Select>
               </div>
-              
+
               <div className="relative aspect-video bg-black rounded-lg overflow-hidden">
                 <video
                   ref={videoRef}
