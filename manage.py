@@ -1,73 +1,78 @@
-import os
-import signal
 import subprocess
 import sys
 import time
-import psutil
+import os
+from pathlib import Path
 
-def find_process_by_port(port):
-    for proc in psutil.process_iter(['pid', 'name']):
-        try:
-            connections = proc.connections()
-            for conn in connections:
-                if hasattr(conn, 'laddr') and conn.laddr.port == port:
-                    return proc.pid
-        except (psutil.NoSuchProcess, psutil.AccessDenied, psutil.ZombieProcess):
-            continue
-    return None
-
-def kill_process_on_port(port):
-    pid = find_process_by_port(port)
-    if pid:
-        try:
-            if sys.platform == 'win32':
-                subprocess.run(['taskkill', '/F', '/PID', str(pid)], check=True)
-            else:
-                os.kill(pid, signal.SIGTERM)
-            print(f"Killed process on port {port}")
-        except Exception as e:
-            print(f"Error killing process on port {port}: {e}")
+def kill_ports_forcefully():
+    """Kill processes on all potential ports more aggressively"""
+    print("Forcefully stopping all existing services...")
+    
+    if sys.platform == 'darwin':  # macOS
+        # Kill Next.js ports
+        for port in range(3000, 3010):
+            subprocess.run(f'lsof -i :{port} | grep LISTEN | awk \'{{print $2}}\' | xargs kill -9', 
+                         shell=True, stderr=subprocess.DEVNULL)
+        # Kill backend port
+        subprocess.run('lsof -i :8000 | grep LISTEN | awk \'{print $2}\' | xargs kill -9', 
+                      shell=True, stderr=subprocess.DEVNULL)
+    
+    elif sys.platform == 'win32':  # Windows
+        for port in range(3000, 3010):
+            subprocess.run(f'FOR /F "tokens=5" %P IN (\'netstat -a -n -o ^| findstr :{port}\') DO TaskKill /PID %P /F', 
+                         shell=True, stderr=subprocess.DEVNULL)
+        subprocess.run('FOR /F "tokens=5" %P IN (\'netstat -a -n -o ^| findstr :8000\') DO TaskKill /PID %P /F', 
+                      shell=True, stderr=subprocess.DEVNULL)
+    
+    else:  # Linux
+        # Kill Next.js ports
+        ports = ",".join(str(port) for port in range(3000, 3010))
+        subprocess.run(f'fuser -k {ports}/tcp', shell=True, stderr=subprocess.DEVNULL)
+        # Kill backend port
+        subprocess.run('fuser -k 8000/tcp', shell=True, stderr=subprocess.DEVNULL)
 
 def main():
-    # Kill existing processes
-    print("Stopping existing services...")
-    kill_process_on_port(3000)  # Frontend port
-    kill_process_on_port(8000)  # Backend port
+    # Get the project root directory
+    project_root = Path(__file__).parent
+    backend_dir = project_root / "backend"
+    frontend_dir = project_root / "frontend"
+
+    print(f"Starting Gemini Chat from {project_root}...")
     
-    time.sleep(2)  # Wait for processes to fully terminate
+    # Kill existing processes
+    kill_ports_forcefully()
+    print("Waiting for ports to clear...")
+    time.sleep(5)  # Increased wait time to ensure ports are cleared
 
     # Start backend
-    print("Starting backend...")
+    print("Starting backend server...")
     backend = subprocess.Popen(
         ["uvicorn", "main:app", "--reload"],
-        cwd="backend"
+        cwd=str(backend_dir)
     )
+
+    # Give backend a moment to start
+    time.sleep(2)
 
     # Start frontend
     print("Starting frontend...")
     frontend = subprocess.Popen(
         ["npm", "run", "dev"],
-        cwd="frontend"
+        cwd=str(frontend_dir)
     )
 
+    print("\nGemini Chat is running!")
+    print("Access the application at: http://localhost:3000")
+    print("Press Ctrl+C to stop all services")
+
     try:
-        # Keep the script running and services alive
         while True:
             time.sleep(1)
     except KeyboardInterrupt:
-        print("\nShutting down services...")
+        print("\nShutting down Gemini Chat...")
         frontend.terminate()
         backend.terminate()
-        frontend.wait()
-        backend.wait()
         print("All services stopped")
 
 if __name__ == "__main__":
-    # Install required package if not present
-    try:
-        import psutil
-    except ImportError:
-        subprocess.check_call([sys.executable, "-m", "pip", "install", "psutil"])
-        import psutil
-    
     main() 
